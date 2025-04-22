@@ -14,80 +14,56 @@ export default function Upload() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFile = (file) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (JPG, PNG).');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size should be less than 5MB.');
-      return;
-    }
-
-    setImage(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  };
-
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-  const handleCancel = () => {
-    setImage(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!image) {
-      alert('Please select an image first!');
-      return;
-    }
-
-    if (!patientName.trim()) {
-      alert('Please enter patient name!');
-      return;
-    }
-
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append('image', image);
-    formData.append('patientName', patientName);
-
-    try {
-      const response = await fetch('http://localhost:5000/predict', {
-  method: 'POST',
-  body: formData,
-  // mode: 'cors', // Try with or without this line
-  headers: {
-    'Accept': 'application/json',
+const handleUpload = async () => {
+  if (!image) {
+    alert('Please select an image first!');
+    return;
   }
-});
+
+  if (!patientName.trim()) {
+    alert('Please enter patient name!');
+    return;
+  }
+
+  setLoading(true);
+
+  const formData = new FormData();
+  formData.append('image', image);
+  formData.append('patientName', patientName);
+
+  try {
+    const response = await fetch('https://check1-backend.vercel.app/predict', {  // Update backend URL here
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      alert(`Analysis error: ${data.error}`);
+    } else {
+      navigate('/result', { 
+        state: { 
+          result: data,
+          originalImage: previewUrl,
+          patientName: patientName 
+        } 
+      });
+    }
+  } catch (err) {
+    console.error('Upload error:', err);
+    alert(`Analysis failed: ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}`);
       }
